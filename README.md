@@ -1,2 +1,2 @@
 # Maze_Solver
-A bot which can solve the maze and figure out the shortest path using an efficient algorithm.
+A Line follower bot which can solve the maze and figure out the shortest path using LHR algorithm.
