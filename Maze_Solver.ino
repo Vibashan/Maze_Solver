@@ -7,8 +7,8 @@
 QTRSensorsAnalog qtra((unsigned char[]) {0, 1, 2, 3, 4}, 
   NUM_SENSORS, NUM_SAMPLES_PER_SENSOR, EMITTER_PIN);
 unsigned int sensorValues[NUM_SENSORS];
-unsigned int line_position=0; // value from 0-7000 to indicate position of line between sensor 0 - 4
-//black is greater than 600 and white is less than 250
+unsigned int line_position=0; // value from 0-5000 to indicate position of line between sensor 0 - 4
+//black is greater than 550 and white is less than 300
 #define WT 300
 #define BT 550
 
@@ -19,17 +19,6 @@ int dir_a = 12;  //direction control for motor outputs 1 and 2 is on digital pin
 int dir_b = 6;  //direction control for motor outputs 3 and 4 is on digital pin 13  (Right motor)
 int dir_ac = 4;  //direction control for motor outputs 1 and 2 is on digital pin 12  (Left motor)
 int dir_bc = 7;  //direction control for motor outputs 3 and 4 is on digital pin 13  (Right motor)
-
-/*int explore 2;
-int solve 3;*/
-
-
-/*// motor driver vars
-// pwm_a/b sets speed.  Value range is 0-255.  For example, if you set the speed at 100 then 100/255 = 39% duty cycle = slow 
-int pwm_a = 3;  //PWM control for motor outputs 1 and 2 is on digital pin 10  (Left motor)
-int pwm_b = 11;  //PWM control for motor outputs 3 and 4 is on digital pin 11  (Right motor)
-int dir_a = 12;  //direction control for motor outputs 1 and 2 is on digital pin 12  (Left motor)
-int dir_b = 13;  //direction control for motor outputs 3 and 4 is on digital pin 13  (Right motor)*/
 
 // motor tuning vars for maze navigating
 int calSpeed = 165;   // tune value motors will run while auto calibration sweeping turn (0-255)
@@ -90,26 +79,21 @@ void setup()
   _delay_ms(500);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //line following subroutine
 // PD Control
 void follow_line()  //follow the line  //added constant speed_lt
 {
-
   lastError = 0;
-  
   while(1)
   {
-
     line_position = qtra.readLine(sensorValues);
     Serial.println(line_position);
     switch(line_position)
     {
-   
-      // case 0 and case 7000 are used in the instructable for PD line following code.
-      // kept here as reference.  Otherwise switch function could be removed.
-      
+      // case 0 and case 5000 are used in the instructable for PD line following code.
+      // kept here as reference.  Otherwise switch function could be removed.   
       //Line has moved off the left edge of sensor
       case 0:
              digitalWrite(dir_a, HIGH);
@@ -120,7 +104,6 @@ void follow_line()  //follow the line  //added constant speed_lt
              analogWrite(pwm_b, 90);
              //Serial.println("Rotate Left\n");
       break;
-  
       // Line had moved off the right edge of sensor
       case 4000:
              digitalWrite(dir_a, LOW);
@@ -130,38 +113,30 @@ void follow_line()  //follow the line  //added constant speed_lt
              digitalWrite(dir_b, LOW);  
              analogWrite(pwm_b, 150);
              //Serial.println("Rotate Right\n");
-      //break;
-   
+      //break;  
       default:
         error = (float)line_position - 2000;
-   
         // set the motor speed based on proportional and derivative PID terms
         // kp is the a floating-point proportional constant (maybe start with a value around 0.5)
         // kd is the floating-point derivative constant (maybe start with a value around 1)
         // note that when doing PID, it's very important you get your signs right, or else the
         // control loop will be unstable
         kp=.2;
-        kd=3;
-     
+        kd=3;    
         PV = kp * error + kd * (error - lastError);
-        lastError = error;
-    
+        lastError = error;   
         //this codes limits the PV (motor speed pwm value)  
         // limit PV to 55
         if (PV > 55)
-        {
-        
+        {      
           PV = 55;
-        }
-    
+        }   
         if (PV < -55)
         {
           PV = -55;
-        }
-        
+        }        
         m1Speed = 200 + PV - speed_lt;
-        m2Speed = 200 - PV - speed_lt;
-       
+        m2Speed = 200 - PV - speed_lt;     
         //set motor speeds
         digitalWrite(dir_a, LOW);
         digitalWrite(dir_ac, HIGH);
@@ -171,10 +146,9 @@ void follow_line()  //follow the line  //added constant speed_lt
         analogWrite(pwm_b, m1Speed);
         break;
     }
-  
-    // We use the inner six sensors (1 thru 6) topid works perfectly !
+    // We use the inner 3 sensors (1 thru 4) topid works perfectly !
     // determine if there is a line straight ahead, and the
-    // sensors 0 and 7 if the path turns.
+    // sensors 0 and 5 if the path turns.
     //as of now a big assumption that 
     if(sensorValues[0] < WT && sensorValues[1] < WT && sensorValues[2] < WT && sensorValues[3] < WT && sensorValues[4] < WT) // read raw ssensor values and chage them
     {
@@ -227,92 +201,58 @@ void turn(char dir)
     // Turn left 90deg
     case 'L':    
       digitalWrite(dir_a, HIGH);
-      digitalWrite(dir_ac, LOW);
-      
+      digitalWrite(dir_ac, LOW);     
       digitalWrite(dir_b, LOW);
-      digitalWrite(dir_bc, HIGH);  
-      /*analogWrite(pwm_b, turnSpeed);
-      analogWrite(pwm_a, turnSpeed);
+      digitalWrite(dir_bc, HIGH); 
       
-      line_position = qtra.readLine(sensorValues);
-      
-      while (sensorValues[0] < BT)  // wait for outer most sensor to find the line ///
-      {
-        line_position = qtra.readLine(sensorValues);
-      }*/
-  
       // slow down speed
       analogWrite(pwm_a, turnSpeedSlow);
-      analogWrite(pwm_b, turnSpeedSlow); 
-      
+      analogWrite(pwm_b, turnSpeedSlow);       
       // find center
       while (/*line_position < 1200 && */sensorValues[1] < BT)  // tune - wait for line position to find near center
       {
         line_position = qtra.readLine(sensorValues);
-      }
-     
+      }    
       // stop both motors
       analogWrite(pwm_b, 0);  // stop right motor first to better avoid over run
       analogWrite(pwm_a, 0);  
-      break;
-      
+      break;      
     // Turn right 90deg
+      
     case 'R':        
       digitalWrite(dir_a, LOW);
-      digitalWrite(dir_ac, HIGH); 
-     
+      digitalWrite(dir_ac, HIGH);     
       digitalWrite(dir_b, HIGH);
       digitalWrite(dir_bc, LOW); 
-      /*analogWrite(pwm_b, turnSpeed);
-      analogWrite(pwm_a, turnSpeed);     
-      line_position = qtra.readLine(sensorValues);
       
-      while (sensorValues[4] < BT)  // wait for outer most sensor to find the line ///
-      {
-        line_position = qtra.readLine(sensorValues);
-      }
-    
-      // slow down speed*/
+      // slow down speed
       analogWrite(pwm_a, turnSpeedSlow);
-      analogWrite(pwm_b, turnSpeedSlow); 
-      
+      analogWrite(pwm_b, turnSpeedSlow);   
       // find center
       while (/*line_position > 3800 && */sensorValues[3] < BT)  // tune - wait for line position to find near center
       {
         line_position = qtra.readLine(sensorValues);
-      }
-     
+      }    
       // stop both motors
       analogWrite(pwm_a, 0);  
       analogWrite(pwm_b, 0);      
-      break;
-    
+      break;   
     // Turn right 180deg to go back
+      
     case 'B':    
       digitalWrite(dir_a, LOW);
       digitalWrite(dir_ac, HIGH); 
-      
       digitalWrite(dir_b, HIGH);
       digitalWrite(dir_bc, LOW);
-      /*analogWrite(pwm_b, turnSpeed);
-      analogWrite(pwm_a, turnSpeed);
-      line_position = qtra.readLine(sensorValues);
-  
-      while (sensorValues[4] < BT)  // wait for outer most sensor to find the line ///
-      {
-        line_position = qtra.readLine(sensorValues);
-      }
-       
+      
       // slow down speed*/
       analogWrite(pwm_a, turnSpeedSlow);
-      analogWrite(pwm_b, turnSpeedSlow); 
-      
+      analogWrite(pwm_b, turnSpeedSlow);      
       // find center
       while (/*line_position > 3800 && */sensorValues[3] < BT)  // tune - wait for line position to find near center
       {
         line_position = qtra.readLine(sensorValues);
-      }
-     
+      }     
       // stop both motors
       analogWrite(pwm_a, 0);  
       analogWrite(pwm_b, 0);           
@@ -325,15 +265,14 @@ void turn(char dir)
   }
 } // end turn
 
-
-////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void simplify_path()
 {
   // only simplify the path if the second-to-last turn was a 'B'
   if(path_length < 3 || path[path_length-2] != 'B')
     return;
-
+  
   int total_angle = 0;
   int i;
   for(i=1;i<=3;i++)
@@ -351,10 +290,8 @@ void simplify_path()
   break;
     }
   }
-
   // Get the angle as a number between 0 and 360 degrees.
   total_angle = total_angle % 360;
-
   // Replace all of those turns with a single one.
   switch(total_angle)
   {
@@ -371,13 +308,11 @@ void simplify_path()
   path[path_length - 3] = 'L';
   break;
   }
-
   // The path is now two steps shorter.
-  path_length -= 2;
-  
+  path_length -= 2;  
 } // end simplify_path
 
-////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void MazeSolve()
 {
@@ -386,22 +321,8 @@ void MazeSolve()
   {
     // FIRST MAIN LOOP BODY  
     follow_line();
-    //stop the motors
-    /*digitalWrite(pwm_a, LOW);
-    digitalWrite(pwm_b, LOW);
-    delay(100);*/
-    
-    // Drive straight a bit.  This helps us in case we entered the
-    // intersection at an angle.
-    /*  digitalWrite(dir_a, LOW);  
-    analogWrite(pwm_a, 200);
-    digitalWrite(dir_b, LOW);  
-    analogWrite(pwm_b, 200);   
-    delay(25); // change this value so as to make our not stop perfectly at the intersection */
-
     // These variables record whether the robot has seen a line to the
-    // left, straight ahead, and right, whil examining the current
-    // intersection.
+    // left, straight ahead, and right, while examining the current intersection
     unsigned char found_left=0;
     unsigned char found_straight=0;
     unsigned char found_right=0;
@@ -446,45 +367,29 @@ void MazeSolve()
     Serial.println(dir);
     // Make the turn indicated by the path.
     turn(dir);
-
     // Store the intersection in the path variable.
     path[path_length] = dir;
     path_length ++;
-
     // Simplify the learned path.
     simplify_path();
   }
-
-
   analogWrite(pwm_a, 0);  // stop both motors
   analogWrite(pwm_b, 0);
-
   //write indication of path solved
   for(int i=0 ; i<5; i++)
   {
     digitalWrite(13, HIGH);
     _delay_ms(250);
   }
-
   // Solved the maze!
-
   // Now enter an infinite loop - we can re-run the maze as many
   // times as we want to.
   while(1)
   {
     analogWrite(pwm_a, 0);  // stop both motors
     analogWrite(pwm_b, 0);
-  
-    // while(1){}; // uncomment this line to cause infinite loop to test if end was found if your robot never seems to stop
-
-//    while(digitalRead(solve))
-   // {
-   //   delay(10);
-   // }
- 
     // delay to give you time to let go of the robot
-    delay(2000); ///  remove  or decrease this to save time
-
+    delay(10000); ///  remove  or decrease this to save time
     // Re-run the now solved maze.  It's not necessary to identify the
     // intersections, so this loop is really simple.
     int i;
@@ -492,53 +397,34 @@ void MazeSolve()
     {
       // SECOND MAIN LOOP BODY  
       follow_line();
-
       // drive past intersection slightly slower and timed delay to align wheels on line
       digitalWrite(dir_a, LOW);  
       analogWrite(pwm_a, 200);
       digitalWrite(dir_b, LOW);  
       analogWrite(pwm_b, 200);
       delay(drivePastDelay); // tune time to allow wheels to position for correct turning
-
       // Make a turn according to the instruction stored in
       // path[i].
       turn(path[i]);
     }
-
     // Follow the last segment up to the finish.
     follow_line();
-
       digitalWrite(dir_a, LOW);  
       analogWrite(pwm_a, 200);
       digitalWrite(dir_b, LOW);  
       analogWrite(pwm_b, 200);
-      delay(drivePastDelay); // tune time to allow wheels to position for correct turning
-        
+      delay(drivePastDelay); // tune time to allow wheels to position for correct turning        
       // Now we should be at the finish!  Now move the robot again and it will re-run this loop with the solution again.  
- 
-  } // end running solved
-  
+  } // end running solved  
 } // end MazeSolve
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop()
 {
   line_position = qtra.readLine(sensorValues);
-
-  /*
-  Serial.print(sensorValues[0]); Serial.print('\t');
-  Serial.print(sensorValues[1]); Serial.print('\t');
-  Serial.print(sensorValues[2]); Serial.print('\t');
-  Serial.print(sensorValues[3]); Serial.print('\t');
-  Serial.print(sensorValues[4]); Serial.print('\t'); 
-  Serial.println(line_position);
-  */
-  
   // begin maze solving
   MazeSolve(); // comment out and run serial monitor to test sensors while manually sweeping across line
-  //follow_line();
   delay(250);
 }
